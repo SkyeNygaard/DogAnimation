@@ -29,6 +29,7 @@ export default function useAnimatedScene({ containerRef, isPlaying }: UseAnimate
     try {
       const { current: container } = containerRef;
       const { scene, camera, renderer } = sceneState.current;
+      const textureLoader = new THREE.TextureLoader();
 
       // Setup
       const width = container.clientWidth;
@@ -65,7 +66,6 @@ export default function useAnimatedScene({ containerRef, isPlaying }: UseAnimate
       mainLight.shadow.mapSize.height = 2048;
       scene.add(mainLight);
 
-      // Add fill light
       const fillLight = new THREE.DirectionalLight(0x9ca3af, 0.4);
       fillLight.position.set(-5, 3, -5);
       scene.add(fillLight);
@@ -145,13 +145,38 @@ export default function useAnimatedScene({ containerRef, isPlaying }: UseAnimate
       const frameDepth = 0.2;
       const frameWidth = 2.2;
       const frameHeight = 3.2;
+      
+      // Create procedural wood grain texture
+      const woodTexture = new THREE.DataTexture(
+        (() => {
+          const size = 256;
+          const data = new Uint8Array(size * size * 4);
+          for (let i = 0; i < size * size; i++) {
+            const stride = i * 4;
+            const noise = Math.random() * 0.2 + 0.8;
+            const grain = Math.sin((i % size) * 0.1) * 0.1 + 0.9;
+            const color = new THREE.Color(0x5D4037).multiplyScalar(noise * grain);
+            data[stride] = Math.floor(color.r * 255);
+            data[stride + 1] = Math.floor(color.g * 255);
+            data[stride + 2] = Math.floor(color.b * 255);
+            data[stride + 3] = 255;
+          }
+          return data;
+        })(),
+        256,
+        256,
+        THREE.RGBAFormat
+      );
+      woodTexture.needsUpdate = true;
+
       const frameMaterial = new THREE.MeshStandardMaterial({
         color: 0x5D4037,
         roughness: 0.7,
         metalness: 0.1,
-        // Wood grain effect
-        bumpScale: 0.02,
-        normalScale: new THREE.Vector2(1, 1)
+        map: woodTexture,
+        normalMap: woodTexture,
+        normalScale: new THREE.Vector2(0.5, 0.5),
+        roughnessMap: woodTexture
       });
 
       // Main frame
@@ -162,43 +187,70 @@ export default function useAnimatedScene({ containerRef, isPlaying }: UseAnimate
       frame.receiveShadow = true;
       doorGroup.add(frame);
 
-      // Door panel group (for cohesive movement)
-      const doorPanelGroup = new THREE.Group();
-
-      // Main door panel
+      // Create door with embossed panels
       const doorWidth = 1.8;
       const doorHeight = 3.0;
       const doorDepth = 0.1;
+
+      // Create panel shapes for extrusion
+      const panelShape = new THREE.Shape();
+      panelShape.moveTo(-0.6, -0.3);
+      panelShape.lineTo(0.6, -0.3);
+      panelShape.lineTo(0.6, 0.3);
+      panelShape.lineTo(-0.6, 0.3);
+      panelShape.lineTo(-0.6, -0.3);
+
+      const holePath = new THREE.Path();
+      holePath.moveTo(-0.5, -0.2);
+      holePath.lineTo(0.5, -0.2);
+      holePath.lineTo(0.5, 0.2);
+      holePath.lineTo(-0.5, 0.2);
+      holePath.lineTo(-0.5, -0.2);
+      panelShape.holes.push(holePath);
+
+      const extrudeSettings = {
+        steps: 1,
+        depth: 0.02,
+        bevelEnabled: true,
+        bevelThickness: 0.01,
+        bevelSize: 0.01,
+        bevelSegments: 3
+      };
+
+      // Create door material with wood texture
       const doorMaterial = new THREE.MeshStandardMaterial({
         color: 0x8B4513,
         roughness: 0.8,
         metalness: 0.1,
-        // Enhanced wood grain effect
-        bumpScale: 0.03,
-        normalScale: new THREE.Vector2(1.5, 1.5)
+        map: woodTexture,
+        normalMap: woodTexture,
+        normalScale: new THREE.Vector2(1, 1),
+        roughnessMap: woodTexture
       });
 
+      // Create main door geometry
       const doorGeometry = new THREE.BoxGeometry(doorWidth, doorHeight, doorDepth);
       const door = new THREE.Mesh(doorGeometry, doorMaterial);
       door.castShadow = true;
       door.position.y = doorHeight / 2;
-      doorPanelGroup.add(door);
 
-      // Door panels (decorative)
-      const createPanel = (width: number, height: number, x: number, y: number) => {
-        const panelGeometry = new THREE.BoxGeometry(width, height, 0.02);
+      // Add embossed panels
+      const panelPositions = [
+        [0, doorHeight * 0.75],  // Top panel
+        [0, doorHeight * 0.3],   // Middle panel
+        [0, doorHeight * -0.15]  // Bottom panel
+      ];
+
+      panelPositions.forEach(([x, y]) => {
+        const panelGeometry = new THREE.ExtrudeGeometry(panelShape, extrudeSettings);
         const panel = new THREE.Mesh(panelGeometry, doorMaterial);
         panel.position.set(x, y, doorDepth / 2);
-        return panel;
-      };
+        door.add(panel);
+      });
 
-      // Add decorative panels
-      const panels = [
-        createPanel(1.4, 0.8, 0, doorHeight * 0.75), // Top panel
-        createPanel(1.4, 1.2, 0, doorHeight * 0.3),  // Middle panel
-        createPanel(1.4, 0.6, 0, doorHeight * -0.15) // Bottom panel
-      ];
-      panels.forEach(panel => doorPanelGroup.add(panel));
+      // Create door panel group for cohesive movement
+      const doorPanelGroup = new THREE.Group();
+      doorPanelGroup.add(door);
 
       // Hinges
       const hingeMaterial = new THREE.MeshStandardMaterial({
