@@ -138,34 +138,110 @@ export default function useAnimatedScene({ containerRef, isPlaying }: UseAnimate
       dogBody.position.set(-3, 0, 0);
       scene.add(dogBody);
 
-      // Door with frame
+      // Door with frame and details
       const doorGroup = new THREE.Group();
       
       // Frame
-      const frameGeometry = new THREE.BoxGeometry(2.2, 3.2, 0.2);
+      const frameDepth = 0.2;
+      const frameWidth = 2.2;
+      const frameHeight = 3.2;
       const frameMaterial = new THREE.MeshStandardMaterial({
-        color: 0x4B2F1C,
-        roughness: 0.9,
-        metalness: 0.1
+        color: 0x5D4037,
+        roughness: 0.7,
+        metalness: 0.1,
+        // Wood grain effect
+        bumpScale: 0.02,
+        normalScale: new THREE.Vector2(1, 1)
       });
+
+      // Main frame
+      const frameGeometry = new THREE.BoxGeometry(frameWidth, frameHeight, frameDepth);
       const frame = new THREE.Mesh(frameGeometry, frameMaterial);
-      frame.position.y = 1.6;
+      frame.position.y = frameHeight / 2;
       frame.castShadow = true;
       frame.receiveShadow = true;
       doorGroup.add(frame);
 
-      // Door
-      const doorGeometry = new THREE.BoxGeometry(1.8, 3, 0.1);
+      // Door panel group (for cohesive movement)
+      const doorPanelGroup = new THREE.Group();
+
+      // Main door panel
+      const doorWidth = 1.8;
+      const doorHeight = 3.0;
+      const doorDepth = 0.1;
       const doorMaterial = new THREE.MeshStandardMaterial({
         color: 0x8B4513,
-        roughness: 0.7,
-        metalness: 0.2
+        roughness: 0.8,
+        metalness: 0.1,
+        // Enhanced wood grain effect
+        bumpScale: 0.03,
+        normalScale: new THREE.Vector2(1.5, 1.5)
       });
-      const door = new THREE.Mesh(doorGeometry, doorMaterial);
-      door.position.set(-0.9, 1.5, 0); // Positioned at hinge point
-      door.castShadow = true;
-      doorGroup.add(door);
 
+      const doorGeometry = new THREE.BoxGeometry(doorWidth, doorHeight, doorDepth);
+      const door = new THREE.Mesh(doorGeometry, doorMaterial);
+      door.castShadow = true;
+      door.position.y = doorHeight / 2;
+      doorPanelGroup.add(door);
+
+      // Door panels (decorative)
+      const createPanel = (width: number, height: number, x: number, y: number) => {
+        const panelGeometry = new THREE.BoxGeometry(width, height, 0.02);
+        const panel = new THREE.Mesh(panelGeometry, doorMaterial);
+        panel.position.set(x, y, doorDepth / 2);
+        return panel;
+      };
+
+      // Add decorative panels
+      const panels = [
+        createPanel(1.4, 0.8, 0, doorHeight * 0.75), // Top panel
+        createPanel(1.4, 1.2, 0, doorHeight * 0.3),  // Middle panel
+        createPanel(1.4, 0.6, 0, doorHeight * -0.15) // Bottom panel
+      ];
+      panels.forEach(panel => doorPanelGroup.add(panel));
+
+      // Hinges
+      const hingeMaterial = new THREE.MeshStandardMaterial({
+        color: 0xC0C0C0,
+        roughness: 0.3,
+        metalness: 0.8
+      });
+
+      const hingeGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.15, 8);
+      const hingePositions = [0.2, 1.5, 2.8]; // Bottom, middle, top
+
+      hingePositions.forEach(y => {
+        const hinge = new THREE.Mesh(hingeGeometry, hingeMaterial);
+        hinge.rotation.z = Math.PI / 2;
+        hinge.position.set(-doorWidth / 2 - 0.05, y, 0);
+        doorPanelGroup.add(hinge);
+      });
+
+      // Doorknob
+      const knobGroup = new THREE.Group();
+      
+      // Knob base
+      const knobBaseMaterial = hingeMaterial;
+      const knobBaseGeometry = new THREE.CylinderGeometry(0.08, 0.08, 0.12, 16);
+      const knobBase = new THREE.Mesh(knobBaseGeometry, knobBaseMaterial);
+      knobBase.rotation.z = Math.PI / 2;
+      knobGroup.add(knobBase);
+
+      // Knob handle
+      const knobHandleGeometry = new THREE.SphereGeometry(0.06, 16, 16);
+      const knobHandle = new THREE.Mesh(knobHandleGeometry, knobBaseMaterial);
+      knobHandle.position.x = 0.1;
+      knobGroup.add(knobHandle);
+
+      // Position knob group on door
+      knobGroup.position.set(doorWidth / 2 - 0.1, doorHeight / 2, doorDepth / 2);
+      doorPanelGroup.add(knobGroup);
+
+      // Position door panel group at hinge point
+      doorPanelGroup.position.x = -doorWidth / 2;
+      doorGroup.add(doorPanelGroup);
+
+      // Position entire door group in scene
       doorGroup.position.set(3, 0, 0);
       scene.add(doorGroup);
 
@@ -188,9 +264,16 @@ export default function useAnimatedScene({ containerRef, isPlaying }: UseAnimate
             leg.position.y = dogHeight / 2 - 0.2 + Math.sin(phase) * legAnimationHeight;
           });
           
-          // Door animation
-          const doorOpenAngle = (Math.sin(time * 0.5) + 1) * 0.5 * Math.PI / 2;
-          door.rotation.y = doorOpenAngle;
+          // Smooth door animation with easing
+          const doorOpenAngle = Math.sin(time * 0.3) * 0.5 + 0.5; // Slower, smoother movement
+          const easedAngle = doorOpenAngle * doorOpenAngle * (3 - 2 * doorOpenAngle); // Smooth easing
+          doorPanelGroup.rotation.y = easedAngle * Math.PI / 2;
+
+          // Subtle doorknob animation
+          if (knobGroup) {
+            const knobRotation = Math.sin(time * 2) * 0.05;
+            knobGroup.rotation.z = knobRotation;
+          }
         }
         
         if (sceneState.current.controls) {
