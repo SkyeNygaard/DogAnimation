@@ -135,7 +135,8 @@ export default function useAnimatedScene({ containerRef, isPlaying }: UseAnimate
         dogBody.add(leg);
       });
 
-      dogBody.position.set(-3, 0, 0);
+      // Set initial dog position
+      dogBody.position.set(-3, 0.1, -2); // Adjusted Y to prevent ground clipping, Z for approach angle
       scene.add(dogBody);
 
       // Door with frame and details
@@ -299,32 +300,86 @@ export default function useAnimatedScene({ containerRef, isPlaying }: UseAnimate
 
       setIsLoading(false);
 
-      // Animation
+      // Animation with phases
+      const animationDuration = 7; // Total animation duration in seconds
+      let startTime = Date.now() * 0.001; // Start time in seconds
+
       function animate() {
         requestAnimationFrame(animate);
         
         if (isPlaying) {
-          const time = Date.now() * 0.001;
-          
-          // Dog walking animation
-          const walkSpeed = 2;
-          const legAnimationHeight = 0.1;
-          
-          legPositions.forEach((_, index) => {
-            const leg = dogBody.children[index + 2]; // +2 to skip body and head
-            const phase = (time * walkSpeed + (index * Math.PI / 2)) % (Math.PI * 2);
-            leg.position.y = dogHeight / 2 - 0.2 + Math.sin(phase) * legAnimationHeight;
-          });
-          
-          // Smooth door animation with easing
-          const doorOpenAngle = Math.sin(time * 0.3) * 0.5 + 0.5; // Slower, smoother movement
-          const easedAngle = doorOpenAngle * doorOpenAngle * (3 - 2 * doorOpenAngle); // Smooth easing
-          doorPanelGroup.rotation.y = easedAngle * Math.PI / 2;
+          const currentTime = Date.now() * 0.001;
+          const elapsedTime = currentTime - startTime;
+          const phase = Math.min(elapsedTime / animationDuration, 1); // Normalized time (0 to 1)
 
-          // Subtle doorknob animation
-          if (knobGroup) {
-            const knobRotation = Math.sin(time * 2) * 0.05;
-            knobGroup.rotation.z = knobRotation;
+          // Animation phases
+          if (phase < 1) {
+            // Phase 1: Dog walks to door (0-2s)
+            if (elapsedTime < 2) {
+              const t = elapsedTime / 2; // Normalize to 0-1
+              const easeT = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; // Smooth easing
+              
+              // Move dog towards door
+              dogBody.position.x = -3 + easeT * 5; // Move from -3 to 2
+              dogBody.position.z = -2 + easeT * 2; // Move from -2 to 0
+              
+              // Leg animation during walking
+              const walkSpeed = 3;
+              const legAnimationHeight = 0.15;
+              
+              dogBody.children.slice(2).forEach((leg, index) => {
+                const legPhase = (currentTime * walkSpeed + (index * Math.PI / 2)) % (Math.PI * 2);
+                leg.position.y = dogHeight / 2 - 0.2 + Math.sin(legPhase) * legAnimationHeight;
+              });
+            }
+            // Phase 2: Dog reaches door and triggers opening (2-3s)
+            else if (elapsedTime < 3) {
+              // Subtle head movement when reaching door
+              const head = dogBody.children[1];
+              const headBobT = ((elapsedTime - 2) * Math.PI * 2);
+              head.position.y = dogHeight / 2 + 0.3 + Math.sin(headBobT) * 0.05;
+            }
+            // Phase 3: Door opens (3-4s)
+            else if (elapsedTime < 4) {
+              const doorT = (elapsedTime - 3) / 1;
+              const easedDoorAngle = doorT * doorT * (3 - 2 * doorT);
+              doorPanelGroup.rotation.y = easedDoorAngle * Math.PI / 2;
+              
+              // Animate doorknob during opening
+              if (knobGroup) {
+                const knobRotation = Math.sin(elapsedTime * 4) * 0.1;
+                knobGroup.rotation.z = knobRotation;
+              }
+            }
+            // Phase 4: Hold position (4-5s)
+            else if (elapsedTime < 5) {
+              // Door stays open, dog stays still
+              doorPanelGroup.rotation.y = Math.PI / 2;
+            }
+            // Phase 5: Return to start (5-7s)
+            else {
+              const returnT = (elapsedTime - 5) / 2;
+              const easeReturnT = returnT * returnT * (3 - 2 * returnT);
+              
+              // Move dog back to start
+              dogBody.position.x = 2 - easeReturnT * 5;
+              dogBody.position.z = -easeReturnT * 2;
+              
+              // Return door to closed position
+              doorPanelGroup.rotation.y = (1 - easeReturnT) * Math.PI / 2;
+              
+              // Leg animation during return walk
+              const walkSpeed = 3;
+              const legAnimationHeight = 0.15;
+              
+              dogBody.children.slice(2).forEach((leg, index) => {
+                const legPhase = (currentTime * walkSpeed + (index * Math.PI / 2)) % (Math.PI * 2);
+                leg.position.y = dogHeight / 2 - 0.2 + Math.sin(legPhase) * legAnimationHeight;
+              });
+            }
+          } else {
+            // Reset animation
+            startTime = currentTime;
           }
         }
         
