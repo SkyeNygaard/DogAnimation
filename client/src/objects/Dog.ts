@@ -104,6 +104,11 @@ export class Dog {
         this.dogBody.position.x = -3 + easeT * 5;
         this.dogBody.position.z = -2 + easeT * 2;
         
+        // Reset rotations and positions when walking
+        this.dogBody.rotation.x = 0;
+        const head = this.dogBody.children[1];
+        head.rotation.x = 0;
+        
         // Leg animation
         const walkSpeed = 3;
         const legAnimationHeight = 0.15;
@@ -111,30 +116,74 @@ export class Dog {
         this.dogBody.children.slice(2).forEach((leg, index) => {
           const legPhase = (currentTime * walkSpeed + (index * Math.PI / 2)) % (Math.PI * 2);
           leg.position.y = this.dogHeight / 2 - 0.2 + Math.sin(legPhase) * legAnimationHeight;
+          // Reset leg positions
+          leg.position.z = index < 2 ? 0.4 : -0.4; // Front/back legs
         });
       }
-      // Phase 2: At door (2-3s)
+      // Phase 2: Stand up (2-3s)
       else if (elapsedTime < 3) {
+        const standT = (elapsedTime - 2);
+        const easeStandT = standT * standT * (3 - 2 * standT);
+        
+        // Rotate body up
+        this.dogBody.rotation.x = -easeStandT * Math.PI / 3;
+        
+        // Adjust front legs
+        const frontLegs = [this.dogBody.children[2], this.dogBody.children[3]];
+        frontLegs.forEach(leg => {
+          leg.position.y = (this.dogHeight / 2 - 0.2) + easeStandT * 0.4;
+          leg.position.z = 0.4 + easeStandT * 0.3;
+        });
+        
+        // Adjust head to look up
         const head = this.dogBody.children[1];
-        const headBobT = ((elapsedTime - 2) * Math.PI * 2);
-        head.position.y = this.dogHeight / 2 + 0.3 + Math.sin(headBobT) * 0.05;
+        head.rotation.x = -easeStandT * Math.PI / 6;
+      }
+      // Phase 3-4: Wait for door (3-5s)
+      else if (elapsedTime < 5) {
+        // Maintain standing pose
+        this.dogBody.rotation.x = -Math.PI / 3;
+        const head = this.dogBody.children[1];
+        head.rotation.x = -Math.PI / 6;
+        
+        // Keep front legs extended
+        const frontLegs = [this.dogBody.children[2], this.dogBody.children[3]];
+        frontLegs.forEach(leg => {
+          leg.position.y = this.dogHeight / 2 - 0.2 + 0.4;
+          leg.position.z = 0.4 + 0.3;
+        });
+        
+        // Add slight idle animation
+        const idleT = Math.sin(elapsedTime * 2) * 0.02;
+        this.dogBody.position.y = 0.1 + idleT;
       }
       // Phase 5: Return to start (5-7s)
       else if (elapsedTime >= 5) {
         const returnT = (elapsedTime - 5) / 2;
         const easeReturnT = returnT * returnT * (3 - 2 * returnT);
         
+        // Gradually return body and head rotation to normal
+        this.dogBody.rotation.x = -(1 - easeReturnT) * Math.PI / 3;
+        const head = this.dogBody.children[1];
+        head.rotation.x = -(1 - easeReturnT) * Math.PI / 6;
+        
         // Move back to start
         this.dogBody.position.x = 2 - easeReturnT * 5;
         this.dogBody.position.z = -easeReturnT * 2;
+        this.dogBody.position.y = 0.1;
         
-        // Leg animation during return
+        // Return legs to normal positions with walking animation
         const walkSpeed = 3;
         const legAnimationHeight = 0.15;
         
         this.dogBody.children.slice(2).forEach((leg, index) => {
           const legPhase = (currentTime * walkSpeed + (index * Math.PI / 2)) % (Math.PI * 2);
           leg.position.y = this.dogHeight / 2 - 0.2 + Math.sin(legPhase) * legAnimationHeight;
+          // Smoothly transition front legs back
+          if (index < 2) {
+            leg.position.z = 0.4 + (1 - easeReturnT) * 0.3;
+            leg.position.y = (this.dogHeight / 2 - 0.2) + (1 - easeReturnT) * 0.4 + Math.sin(legPhase) * legAnimationHeight;
+          }
         });
       }
     }
