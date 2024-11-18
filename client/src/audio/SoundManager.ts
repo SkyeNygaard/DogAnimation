@@ -58,25 +58,26 @@ export class SoundManager {
   }
 
   private createDoorSound(): void {
-    // Creaking sweep oscillator
+    // Creaking sweep oscillator with richer harmonics
     const creakOsc = this.audioContext.createOscillator();
-    creakOsc.frequency.setValueAtTime(800, this.audioContext.currentTime);
-    creakOsc.frequency.exponentialRampToValueAtTime(200, this.audioContext.currentTime + 2.0);
+    creakOsc.type = 'sawtooth';  // Changed from default 'sine' for richer harmonics
+    creakOsc.frequency.setValueAtTime(1200, this.audioContext.currentTime);  // Higher start frequency
+    creakOsc.frequency.exponentialRampToValueAtTime(100, this.audioContext.currentTime + 2.0);  // Lower end frequency
 
-    // Creak envelope with increased gain and longer duration
+    // Creak envelope with increased gain
     const creakGain = this.audioContext.createGain();
     creakGain.gain.setValueAtTime(0, this.audioContext.currentTime);
-    creakGain.gain.linearRampToValueAtTime(0.4, this.audioContext.currentTime + 0.1);  // Increased from 0.15
-    creakGain.gain.setValueAtTime(0.4, this.audioContext.currentTime + 1.5);          // Extended from 0.8
-    creakGain.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + 2.0);   // Extended from 1.0
+    creakGain.gain.linearRampToValueAtTime(0.8, this.audioContext.currentTime + 0.1);  // Doubled from 0.4
+    creakGain.gain.setValueAtTime(0.8, this.audioContext.currentTime + 1.5);          
 
-    // Low frequency resonance with enhanced gain
+    // Low frequency resonance with enhanced presence
     const resonanceOsc = this.audioContext.createOscillator();
-    resonanceOsc.frequency.setValueAtTime(50, this.audioContext.currentTime);
+    resonanceOsc.type = 'square';  // Changed from default 'sine' for more presence
+    resonanceOsc.frequency.setValueAtTime(80, this.audioContext.currentTime);  // Increased from 50 for more audible resonance
 
     const resonanceGain = this.audioContext.createGain();
     resonanceGain.gain.setValueAtTime(0, this.audioContext.currentTime);
-    resonanceGain.gain.linearRampToValueAtTime(0.35, this.audioContext.currentTime + 0.1); // Increased from 0.2
+    resonanceGain.gain.linearRampToValueAtTime(0.7, this.audioContext.currentTime + 0.1); // Doubled from 0.35
     resonanceGain.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + 2.0);    // Extended duration
 
     // Contact noise burst
@@ -91,7 +92,7 @@ export class SoundManager {
 
     const burstGain = this.audioContext.createGain();
     burstGain.gain.setValueAtTime(0, this.audioContext.currentTime);
-    burstGain.gain.linearRampToValueAtTime(0.1, this.audioContext.currentTime + 0.02);
+    burstGain.gain.linearRampToValueAtTime(0.3, this.audioContext.currentTime + 0.02);  // Tripled from 0.1
     burstGain.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 0.1);
 
     // Connect all nodes
