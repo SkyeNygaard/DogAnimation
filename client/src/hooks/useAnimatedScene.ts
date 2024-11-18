@@ -4,6 +4,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import type { SceneState } from '../types/scene';
 import { Dog } from '../objects/Dog';
 import { Door } from '../objects/Door';
+import { SoundManager } from '../audio/SoundManager';
 
 interface UseAnimatedSceneProps {
   containerRef: RefObject<HTMLDivElement>;
@@ -15,6 +16,7 @@ export default function useAnimatedScene({ containerRef, isPlaying }: UseAnimate
   const [error, setError] = useState<Error | null>(null);
   const dogRef = useRef<Dog | null>(null);
   const doorRef = useRef<Door | null>(null);
+  const soundManagerRef = useRef<SoundManager | null>(null);
   const sceneState = useRef<SceneState>({
     scene: new THREE.Scene(),
     camera: new THREE.PerspectiveCamera(75, 1, 0.1, 1000),
@@ -33,6 +35,11 @@ export default function useAnimatedScene({ containerRef, isPlaying }: UseAnimate
     try {
       const { current: container } = containerRef;
       const { scene, camera, renderer } = sceneState.current;
+
+      // Initialize sound manager if it doesn't exist
+      if (!soundManagerRef.current) {
+        soundManagerRef.current = new SoundManager();
+      }
 
       // Setup
       const width = container.clientWidth;
@@ -122,6 +129,7 @@ export default function useAnimatedScene({ containerRef, isPlaying }: UseAnimate
       // Animation
       const animationDuration = 7;
       let startTime = Date.now() * 0.001;
+      let previousPhase = 0;
 
       function animate() {
         requestAnimationFrame(animate);
@@ -132,6 +140,23 @@ export default function useAnimatedScene({ containerRef, isPlaying }: UseAnimate
           const phase = Math.min(elapsedTime / animationDuration, 1);
 
           if (phase < 1) {
+            // Handle walking sound (Phase 1: 0-2s)
+            if (elapsedTime < 2 && soundManagerRef.current) {
+              soundManagerRef.current.startWalking();
+            } else if (elapsedTime >= 2 && elapsedTime < 3 && soundManagerRef.current) {
+              soundManagerRef.current.stopWalking();
+            }
+
+            // Handle door sound (Phase 3: 3-4s)
+            if (previousPhase < 3 && elapsedTime >= 3 && soundManagerRef.current) {
+              soundManagerRef.current.playDoorSound();
+            }
+
+            // Handle return walking sound (Phase 5: 5-7s)
+            if (elapsedTime >= 5 && soundManagerRef.current) {
+              soundManagerRef.current.startWalking();
+            }
+
             // Animate dog and door with ref checks
             if (dogRef.current) {
               dogRef.current.animateWalking(currentTime, elapsedTime, phase);
@@ -139,9 +164,20 @@ export default function useAnimatedScene({ containerRef, isPlaying }: UseAnimate
             if (doorRef.current) {
               doorRef.current.animateDoor(elapsedTime);
             }
+
+            previousPhase = elapsedTime;
           } else {
             // Reset animation
             startTime = currentTime;
+            previousPhase = 0;
+            if (soundManagerRef.current) {
+              soundManagerRef.current.stopAllSounds();
+            }
+          }
+        } else {
+          // Stop all sounds when animation is not playing
+          if (soundManagerRef.current) {
+            soundManagerRef.current.stopAllSounds();
           }
         }
         
@@ -182,6 +218,11 @@ export default function useAnimatedScene({ containerRef, isPlaying }: UseAnimate
         
         if (sceneState.current.controls) {
           sceneState.current.controls.dispose();
+        }
+
+        // Add sound cleanup to the cleanup function
+        if (soundManagerRef.current) {
+          soundManagerRef.current.stopAllSounds();
         }
       };
     } catch (err) {
