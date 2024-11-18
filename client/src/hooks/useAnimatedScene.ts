@@ -13,6 +13,8 @@ interface UseAnimatedSceneProps {
 export default function useAnimatedScene({ containerRef, isPlaying }: UseAnimatedSceneProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const dogRef = useRef<Dog | null>(null);
+  const doorRef = useRef<Door | null>(null);
   const sceneState = useRef<SceneState>({
     scene: new THREE.Scene(),
     camera: new THREE.PerspectiveCamera(75, 1, 0.1, 1000),
@@ -96,9 +98,13 @@ export default function useAnimatedScene({ containerRef, isPlaying }: UseAnimate
       backWall.receiveShadow = true;
       scene.add(backWall);
 
-      // Create dog and door instances
-      const dog = new Dog(scene);
-      const door = new Door(scene);
+      // Create dog and door instances only if they don't exist
+      if (!dogRef.current) {
+        dogRef.current = new Dog(scene);
+      }
+      if (!doorRef.current) {
+        doorRef.current = new Door(scene);
+      }
 
       setIsLoading(false);
 
@@ -115,9 +121,13 @@ export default function useAnimatedScene({ containerRef, isPlaying }: UseAnimate
           const phase = Math.min(elapsedTime / animationDuration, 1);
 
           if (phase < 1) {
-            // Animate dog and door
-            dog.animateWalking(currentTime, elapsedTime, phase);
-            door.animateDoor(elapsedTime);
+            // Animate dog and door with ref checks
+            if (dogRef.current) {
+              dogRef.current.animateWalking(currentTime, elapsedTime, phase);
+            }
+            if (doorRef.current) {
+              doorRef.current.animateDoor(elapsedTime);
+            }
           } else {
             // Reset animation
             startTime = currentTime;
@@ -148,6 +158,17 @@ export default function useAnimatedScene({ containerRef, isPlaying }: UseAnimate
       return () => {
         window.removeEventListener('resize', handleResize);
         container.removeChild(renderer.domElement);
+        
+        // Remove dog and door instances
+        if (dogRef.current) {
+          scene.remove(dogRef.current.getDogBody());
+          dogRef.current = null;
+        }
+        if (doorRef.current) {
+          scene.remove(doorRef.current.getDoorGroup());
+          doorRef.current = null;
+        }
+        
         if (sceneState.current.controls) {
           sceneState.current.controls.dispose();
         }
