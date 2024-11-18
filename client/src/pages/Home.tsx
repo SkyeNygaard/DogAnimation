@@ -12,15 +12,6 @@ export default function Home() {
         <Card className="overflow-hidden bg-black/50 backdrop-blur-sm">
           <div className="aspect-video w-full relative">
             <Scene isPlaying={isPlaying} />
-            <div className="absolute top-4 left-4 text-white/70 text-sm bg-black/30 p-3 rounded-lg backdrop-blur-sm">
-              <p>Camera Controls:</p>
-              <ul className="list-disc list-inside mt-1">
-                <li>Left Click + Drag to rotate</li>
-                <li>Right Click + Drag to pan</li>
-                <li>Scroll to zoom</li>
-                <li>Double Click to reset view</li>
-              </ul>
-            </div>
           </div>
           <div className="p-4 flex justify-center">
             <Button 

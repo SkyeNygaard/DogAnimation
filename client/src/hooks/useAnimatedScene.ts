@@ -63,45 +63,6 @@ export default function useAnimatedScene({ containerRef, isPlaying }: UseAnimate
       controls.rotateSpeed = 0.7; // Adjusted rotation speed
       controls.zoomSpeed = 1.2;   // Slightly faster zoom
 
-      // Add auto-rotation (disabled when user interacts)
-      controls.autoRotate = true;
-      controls.autoRotateSpeed = 0.5;
-
-      // Reset camera position function
-      const resetCamera = () => {
-        const initPosition = new THREE.Vector3(8, 6, 8);
-        const initTarget = new THREE.Vector3(0, 0, 0);
-        
-        // Smoothly animate to initial position
-        const duration = 1000; // ms
-        const start = {
-          x: camera.position.x,
-          y: camera.position.y,
-          z: camera.position.z
-        };
-        
-        const animate = (time: number) => {
-          const t = Math.min(time / duration, 1);
-          const easeT = t * (2 - t); // easeOut quad
-          
-          camera.position.set(
-            start.x + (initPosition.x - start.x) * easeT,
-            start.y + (initPosition.y - start.y) * easeT,
-            start.z + (initPosition.z - start.z) * easeT
-          );
-          
-          controls.target.lerp(initTarget, easeT);
-          
-          if (t < 1) requestAnimationFrame((newTime) => animate(newTime - performance.now() + time));
-          controls.update();
-        };
-        
-        animate(0);
-      };
-
-      // Add double-click handler for reset
-      renderer.domElement.addEventListener('dblclick', resetCamera);
-
       // Lights
       const ambient = new THREE.AmbientLight(0xffffff, 0.4);
       scene.add(ambient);
@@ -207,7 +168,6 @@ export default function useAnimatedScene({ containerRef, isPlaying }: UseAnimate
       // Cleanup
       return () => {
         window.removeEventListener('resize', handleResize);
-        renderer.domElement.removeEventListener('dblclick', resetCamera);
         container.removeChild(renderer.domElement);
         
         // Remove dog and door instances
