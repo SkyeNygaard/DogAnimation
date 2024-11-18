@@ -34,6 +34,44 @@ export class Dog {
     head.castShadow = true;
     dogBody.add(head);
 
+    // Eyes
+    const eyeGeometry = new THREE.SphereGeometry(0.05);
+    const eyeMaterial = new THREE.MeshStandardMaterial({ color: 0x000000 });
+    const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+    const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+    leftEye.position.set(-0.1, 0.1, 0.15);
+    rightEye.position.set(0.1, 0.1, 0.15);
+    leftEye.castShadow = true;
+    rightEye.castShadow = true;
+    head.add(leftEye);
+    head.add(rightEye);
+
+    // Snout with nose
+    const snoutGeometry = new THREE.BoxGeometry(0.2, 0.15, 0.3);
+    const snout = new THREE.Mesh(snoutGeometry, this.bodyMaterial);
+    snout.position.set(0, -0.05, 0.2);
+    snout.castShadow = true;
+    const noseGeometry = new THREE.SphereGeometry(0.05);
+    const noseMaterial = new THREE.MeshStandardMaterial({ color: 0x000000 });
+    const nose = new THREE.Mesh(noseGeometry, noseMaterial);
+    nose.position.set(0, 0, 0.15);
+    nose.castShadow = true;
+    snout.add(nose);
+    head.add(snout);
+
+    // Ears
+    const earGeometry = new THREE.ConeGeometry(0.1, 0.2, 4);
+    const leftEar = new THREE.Mesh(earGeometry, this.bodyMaterial);
+    const rightEar = new THREE.Mesh(earGeometry, this.bodyMaterial);
+    leftEar.position.set(-0.15, 0.3, 0);
+    rightEar.position.set(0.15, 0.3, 0);
+    leftEar.rotation.x = -Math.PI * 0.1;
+    rightEar.rotation.x = -Math.PI * 0.1;
+    leftEar.castShadow = true;
+    rightEar.castShadow = true;
+    head.add(leftEar);
+    head.add(rightEar);
+
     // Legs
     const legGeometry = new THREE.BoxGeometry(0.2, 0.4, 0.2);
     const legPositions = [
