@@ -61,23 +61,23 @@ export class SoundManager {
     // Creaking sweep oscillator
     const creakOsc = this.audioContext.createOscillator();
     creakOsc.frequency.setValueAtTime(800, this.audioContext.currentTime);
-    creakOsc.frequency.exponentialRampToValueAtTime(200, this.audioContext.currentTime + 1.0);
+    creakOsc.frequency.exponentialRampToValueAtTime(200, this.audioContext.currentTime + 2.0);
 
-    // Creak envelope
+    // Creak envelope with increased gain and longer duration
     const creakGain = this.audioContext.createGain();
     creakGain.gain.setValueAtTime(0, this.audioContext.currentTime);
-    creakGain.gain.linearRampToValueAtTime(0.15, this.audioContext.currentTime + 0.1);
-    creakGain.gain.setValueAtTime(0.15, this.audioContext.currentTime + 0.8);
-    creakGain.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + 1.0);
+    creakGain.gain.linearRampToValueAtTime(0.4, this.audioContext.currentTime + 0.1);  // Increased from 0.15
+    creakGain.gain.setValueAtTime(0.4, this.audioContext.currentTime + 1.5);          // Extended from 0.8
+    creakGain.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + 2.0);   // Extended from 1.0
 
-    // Low frequency resonance
+    // Low frequency resonance with enhanced gain
     const resonanceOsc = this.audioContext.createOscillator();
     resonanceOsc.frequency.setValueAtTime(50, this.audioContext.currentTime);
 
     const resonanceGain = this.audioContext.createGain();
     resonanceGain.gain.setValueAtTime(0, this.audioContext.currentTime);
-    resonanceGain.gain.linearRampToValueAtTime(0.2, this.audioContext.currentTime + 0.1);
-    resonanceGain.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + 1.0);
+    resonanceGain.gain.linearRampToValueAtTime(0.35, this.audioContext.currentTime + 0.1); // Increased from 0.2
+    resonanceGain.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + 2.0);    // Extended duration
 
     // Contact noise burst
     const burstBuffer = this.audioContext.createBuffer(1, this.audioContext.sampleRate * 0.1, this.audioContext.sampleRate);
@@ -110,7 +110,7 @@ export class SoundManager {
     // Store nodes for cleanup
     this.nodes.push(creakOsc, creakGain, resonanceOsc, resonanceGain, burstGain);
 
-    // Stop after duration
+    // Stop after duration (extended to match new length)
     setTimeout(() => {
       creakOsc.stop();
       resonanceOsc.stop();
@@ -119,7 +119,7 @@ export class SoundManager {
         node !== resonanceOsc && node !== resonanceGain && 
         node !== burstGain
       );
-    }, 1000);
+    }, 2000);  // Changed from 1000 to match new 2-second duration
   }
 
   public async startWalking() {
