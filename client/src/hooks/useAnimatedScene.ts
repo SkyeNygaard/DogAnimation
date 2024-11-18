@@ -47,10 +47,60 @@ export default function useAnimatedScene({ containerRef, isPlaying }: UseAnimate
       camera.position.set(8, 6, 8);
       camera.lookAt(0, 0, 0);
 
-      // Controls
+      // Enhanced Controls
       sceneState.current.controls = new OrbitControls(camera, renderer.domElement);
-      sceneState.current.controls.enableDamping = true;
-      sceneState.current.controls.dampingFactor = 0.05;
+      const controls = sceneState.current.controls;
+      
+      // Control limits and settings
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      controls.minDistance = 5;  // Minimum zoom distance
+      controls.maxDistance = 15; // Maximum zoom distance
+      controls.maxPolarAngle = Math.PI / 2 - 0.1; // Prevent camera from going below ground
+      controls.minPolarAngle = 0.1; // Prevent camera from going directly overhead
+      controls.enablePan = true;  // Allow panning
+      controls.panSpeed = 0.5;    // Reduce pan speed for more control
+      controls.rotateSpeed = 0.7; // Adjusted rotation speed
+      controls.zoomSpeed = 1.2;   // Slightly faster zoom
+
+      // Add auto-rotation (disabled when user interacts)
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = 0.5;
+
+      // Reset camera position function
+      const resetCamera = () => {
+        const initPosition = new THREE.Vector3(8, 6, 8);
+        const initTarget = new THREE.Vector3(0, 0, 0);
+        
+        // Smoothly animate to initial position
+        const duration = 1000; // ms
+        const start = {
+          x: camera.position.x,
+          y: camera.position.y,
+          z: camera.position.z
+        };
+        
+        const animate = (time: number) => {
+          const t = Math.min(time / duration, 1);
+          const easeT = t * (2 - t); // easeOut quad
+          
+          camera.position.set(
+            start.x + (initPosition.x - start.x) * easeT,
+            start.y + (initPosition.y - start.y) * easeT,
+            start.z + (initPosition.z - start.z) * easeT
+          );
+          
+          controls.target.lerp(initTarget, easeT);
+          
+          if (t < 1) requestAnimationFrame((newTime) => animate(newTime - performance.now() + time));
+          controls.update();
+        };
+        
+        animate(0);
+      };
+
+      // Add double-click handler for reset
+      renderer.domElement.addEventListener('dblclick', resetCamera);
 
       // Lights
       const ambient = new THREE.AmbientLight(0xffffff, 0.4);
@@ -157,6 +207,7 @@ export default function useAnimatedScene({ containerRef, isPlaying }: UseAnimate
       // Cleanup
       return () => {
         window.removeEventListener('resize', handleResize);
+        renderer.domElement.removeEventListener('dblclick', resetCamera);
         container.removeChild(renderer.domElement);
         
         // Remove dog and door instances
